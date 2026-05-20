@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LocKey Access Tester</title>
+    <style>
+      :root {
+        --bg: #f6f1e8;
+        --panel: rgba(255, 252, 247, 0.92);
+        --border: #d4c7b3;
+        --text: #1f1a16;
+        --muted: #695b4f;
+        --accent: #0c7c59;
+        --accent-strong: #095a41;
+        --danger: #a12f2f;
+        --shadow: 0 18px 50px rgba(54, 38, 20, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(12, 124, 89, 0.16), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(183, 120, 42, 0.18), transparent 24%),
+          linear-gradient(180deg, #f9f4eb 0%, #f2ebe1 100%);
+      }
+
+      main {
+        width: min(1080px, calc(100vw - 32px));
+        margin: 32px auto;
+        padding: 28px;
+        border: 1px solid rgba(212, 199, 179, 0.75);
+        border-radius: 28px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(14px);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(2rem, 3vw, 3rem);
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+
+      .lead {
+        margin: 0 0 24px;
+        max-width: 70ch;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 18px;
+      }
+
+      section {
+        padding: 20px;
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 1.1rem;
+      }
+
+      .form {
+        display: grid;
+        gap: 12px;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 0.92rem;
+        color: var(--muted);
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.88);
+        color: var(--text);
+        font: inherit;
+      }
+
+      textarea {
+        min-height: 140px;
+        resize: vertical;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 140ms ease, background 140ms ease;
+      }
+
+      button:hover {
+        background: var(--accent-strong);
+        transform: translateY(-1px);
+      }
+
+      .ghost {
+        background: #efe4d3;
+        color: var(--text);
+      }
+
+      .ghost:hover {
+        background: #e6d6bf;
+      }
+
+      .hint {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .response {
+        white-space: pre-wrap;
+        font-family: "SFMono-Regular", "Menlo", monospace;
+        font-size: 0.88rem;
+      }
+
+      .status {
+        margin: 0 0 14px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(12, 124, 89, 0.1);
+        color: var(--accent-strong);
+      }
+
+      .status.error {
+        background: rgba(161, 47, 47, 0.12);
+        color: var(--danger);
+      }
+
+      code {
+        padding: 0.15em 0.4em;
+        border-radius: 0.5em;
+        background: rgba(18, 22, 26, 0.06);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>LocKey Access Tester</h1>
+      <p class="lead">
+        Тестовая страница для online и MVP offline-потока: выпустить <code>access_code</code>,
+        проверить вход по коду замка и заранее сохранить <code>offline_ticket</code> для BLE-фолбэка.
+      </p>
+
+      <div class="grid">
+        <section>
+          <h2>1. Выпуск access code</h2>
+          <div class="form">
+            <label>
+              Lock ID
+              <input id="lockId" value="studio-a1" />
+            </label>
+            <label>
+              Начало бронирования
+              <input id="bookingStartsAt" type="datetime-local" />
+            </label>
+            <label>
+              Конец бронирования
+              <input id="bookingEndsAt" type="datetime-local" />
+            </label>
+            <div class="actions">
+              <button id="issueCodeButton" type="button">Выпустить код</button>
+              <button id="fillWindowButton" class="ghost" type="button">Окно +2 часа</button>
+            </div>
+          </div>
+          <p class="hint">
+            Endpoint: <code>POST /api/v1/external-crm/access-code</code>
+          </p>
+        </section>
+
+        <section>
+          <h2>2. Проверка доступа и открытие</h2>
+          <div class="form">
+            <label>
+              Access code
+              <input id="accessCode" placeholder="Например, ABCDE12345" />
+            </label>
+            <label>
+              Код с замка
+              <input id="lockCode" placeholder="Например, 8F1C2A" />
+            </label>
+            <div class="actions">
+              <button id="verifyButton" type="button">Проверить и открыть</button>
+              <button id="copyCodeButton" class="ghost" type="button">Скопировать access code</button>
+            </div>
+          </div>
+          <p class="hint">
+            Endpoint: <code>POST /api/v1/locks/{lock_id}/verify-access</code>. Замок должен быть онлайн
+            по WebSocket и показывать актуальный код.
+          </p>
+        </section>
+
+        <section>
+          <h2>3. MVP offline ticket</h2>
+          <div class="form">
+            <label>
+              Offline ticket
+              <textarea
+                id="offlineTicket"
+                placeholder="Нажми 'Выпустить offline ticket', чтобы сохранить билет для BLE-открытия"
+              ></textarea>
+            </label>
+            <div class="actions">
+              <button id="issueOfflineTicketButton" type="button">Выпустить offline ticket</button>
+              <button id="verifyOfflineTicketButton" class="ghost" type="button">Проверить offline ticket</button>
+              <button id="copyOfflineTicketButton" class="ghost" type="button">Скопировать offline ticket</button>
+            </div>
+          </div>
+          <p class="hint">
+            Issue: <code>POST /api/v1/offline-tickets/issue</code>.
+            Verify: <code>POST /api/v1/offline-tickets/verify</code>.
+            В реальном offline-сценарии backend уже не участвует, этот verify нужен как эталон и тест.
+          </p>
+        </section>
+      </div>
+
+      <section style="margin-top: 18px">
+        <h2>Результат</h2>
+        <div id="status" class="status">Готово к тесту</div>
+        <textarea id="response" class="response" readonly></textarea>
+      </section>
+    </main>
+
+    <script>
+      const elements = {
+        accessCode: document.getElementById("accessCode"),
+        bookingEndsAt: document.getElementById("bookingEndsAt"),
+        bookingStartsAt: document.getElementById("bookingStartsAt"),
+        lockCode: document.getElementById("lockCode"),
+        lockId: document.getElementById("lockId"),
+        offlineTicket: document.getElementById("offlineTicket"),
+        response: document.getElementById("response"),
+        status: document.getElementById("status"),
+      };
+
+      function toLocalDateTimeValue(date) {
+        const pad = (value) => String(value).padStart(2, "0");
+        return [
+          date.getFullYear(),
+          pad(date.getMonth() + 1),
+          pad(date.getDate()),
+        ].join("-") + "T" + [pad(date.getHours()), pad(date.getMinutes())].join(":");
+      }
+
+      function toUtcIso(value) {
+        return new Date(value).toISOString();
+      }
+
+      function setDefaultWindow() {
+        const now = new Date();
+        const endsAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        elements.bookingStartsAt.value = toLocalDateTimeValue(now);
+        elements.bookingEndsAt.value = toLocalDateTimeValue(endsAt);
+      }
+
+      function setStatus(message, isError = false) {
+        elements.status.textContent = message;
+        elements.status.classList.toggle("error", isError);
+      }
+
+      function setResponse(title, payload) {
+        elements.response.value = `${title}\n\n${JSON.stringify(payload, null, 2)}`;
+      }
+
+      async function postJson(url, body) {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const message = payload.detail || response.statusText || "Request failed";
+          throw new Error(`${response.status} ${message}`);
+        }
+        return payload;
+      }
+
+      function getBookingRequest() {
+        return {
+          lock_id: elements.lockId.value.trim(),
+          booking_starts_at: toUtcIso(elements.bookingStartsAt.value),
+          booking_ends_at: toUtcIso(elements.bookingEndsAt.value),
+        };
+      }
+
+      function requireFields(fields, message) {
+        if (fields.every(Boolean)) {
+          return true;
+        }
+        setStatus(message, true);
+        return false;
+      }
+
+      async function runRequest({ action, error, request, success, title }) {
+        setStatus(action);
+        try {
+          const payload = await request();
+          success?.(payload);
+          setStatus(title);
+          setResponse(title, payload);
+        } catch (requestError) {
+          setStatus(error, true);
+          setResponse(error, { error: String(requestError) });
+        }
+      }
+
+      async function issueAccessCode() {
+        if (!requireFields(
+          [elements.lockId.value.trim(), elements.bookingStartsAt.value, elements.bookingEndsAt.value],
+          "Нужны lock_id и окно бронирования",
+        )) {
+          return;
+        }
+
+        await runRequest({
+          action: "Выпускаю access code...",
+          error: "Не удалось выпустить access code",
+          request: () => postJson("/api/v1/external-crm/access-code", getBookingRequest()),
+          success: (payload) => {
+            elements.accessCode.value = payload.access_code;
+            elements.bookingStartsAt.value = toLocalDateTimeValue(new Date(payload.booking_starts_at));
+            elements.bookingEndsAt.value = toLocalDateTimeValue(new Date(payload.booking_ends_at));
+          },
+          title: "Access code выпущен",
+        });
+      }
+
+      async function verifyAccess() {
+        const accessCode = elements.accessCode.value.trim();
+        const lockCode = elements.lockCode.value.trim().toUpperCase();
+
+        if (!requireFields(
+          [elements.lockId.value.trim(), accessCode, lockCode, elements.bookingStartsAt.value, elements.bookingEndsAt.value],
+          "Нужны access_code, lock_code и окно бронирования",
+        )) {
+          return;
+        }
+
+        await runRequest({
+          action: "Проверяю доступ и отправляю open...",
+          error: "Проверка доступа завершилась ошибкой",
+          request: () => postJson(`/api/v1/locks/${encodeURIComponent(elements.lockId.value.trim())}/verify-access`, {
+            ...getBookingRequest(),
+            access_code: accessCode,
+            lock_code: lockCode,
+          }),
+          title: "Доступ подтвержден, команда open отправлена",
+        });
+      }
+
+      async function issueOfflineTicket() {
+        const accessCode = elements.accessCode.value.trim();
+
+        if (!requireFields(
+          [elements.lockId.value.trim(), accessCode, elements.bookingStartsAt.value, elements.bookingEndsAt.value],
+          "Нужны access_code и окно бронирования",
+        )) {
+          return;
+        }
+
+        await runRequest({
+          action: "Выпускаю offline ticket...",
+          error: "Не удалось выпустить offline ticket",
+          request: () => postJson("/api/v1/offline-tickets/issue", {
+            ...getBookingRequest(),
+            access_code: accessCode,
+          }),
+          success: (payload) => {
+            elements.offlineTicket.value = payload.offline_ticket;
+          },
+          title: "Offline ticket выпущен",
+        });
+      }
+
+      async function verifyOfflineTicket() {
+        const offlineTicket = elements.offlineTicket.value.trim();
+
+        if (!requireFields(
+          [elements.lockId.value.trim(), offlineTicket],
+          "Нужны lock_id и offline_ticket",
+        )) {
+          return;
+        }
+
+        await runRequest({
+          action: "Проверяю offline ticket...",
+          error: "Offline ticket не прошёл проверку",
+          request: () => postJson("/api/v1/offline-tickets/verify", {
+            lock_id: elements.lockId.value.trim(),
+            offline_ticket: offlineTicket,
+          }),
+          title: "Offline ticket валиден",
+        });
+      }
+
+      async function copyField(source, emptyMessage, successMessage) {
+        const value = source.value.trim();
+        if (!value) {
+          setStatus(emptyMessage, true);
+          return;
+        }
+
+        try {
+          await navigator.clipboard.writeText(value);
+          setStatus(successMessage);
+        } catch (error) {
+          setStatus("Не удалось скопировать значение", true);
+          setResponse("Clipboard error", { error: String(error) });
+        }
+      }
+
+      document.getElementById("fillWindowButton").addEventListener("click", setDefaultWindow);
+      document.getElementById("issueCodeButton").addEventListener("click", issueAccessCode);
+      document.getElementById("verifyButton").addEventListener("click", verifyAccess);
+      document.getElementById("copyCodeButton").addEventListener("click", () =>
+        copyField(elements.accessCode, "Сначала выпусти access code", "Access code скопирован"),
+      );
+      document.getElementById("issueOfflineTicketButton").addEventListener("click", issueOfflineTicket);
+      document.getElementById("verifyOfflineTicketButton").addEventListener("click", verifyOfflineTicket);
+      document.getElementById("copyOfflineTicketButton").addEventListener("click", () =>
+        copyField(elements.offlineTicket, "Сначала выпусти offline ticket", "Offline ticket скопирован"),
+      );
+
+      setDefaultWindow();
+      setResponse("How to use", {
+        steps: [
+          "1. Убедись, что ESP32 подключена к backend по WebSocket.",
+          "2. Выпусти access_code для lock_id и окна бронирования.",
+          "3. Для online-потока: считай текущий код с экрана замка и нажми 'Проверить и открыть'.",
+          "4. Для offline-потока: выпусти offline_ticket и сохрани его в приложении.",
+          "5. Endpoint verify для offline_ticket нужен как эталон до BLE-интеграции на ESP32.",
+        ],
+      });
+    </script>
+  </body>
+</html>

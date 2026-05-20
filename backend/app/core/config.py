@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     app_port: int = 8000
     api_prefix: str = "/api/v1"
     log_level: str = "INFO"
+    qr_secret: str = "change-me-in-production"
+    qr_step_seconds: int = 20
+    qr_allowed_drift_steps: int = 1
+    external_crm_code_secret: str = "change-me-external-crm-secret"
+    booking_early_access_buffer_minutes: int = 5
+    offline_ticket_secret: str = "change-me-offline-ticket-secret"
+    offline_ticket_allowed_drift_seconds: int = 60
     db_host: str = "postgres"
     db_port: int = 5432
     db_name: str = "lockey"

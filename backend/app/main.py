@@ -8,12 +8,18 @@ from app.api import api_router
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.db import DatabaseManager
+from app.services.locks import LockManager
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     app_settings = settings or get_settings()
     configure_logging(app_settings)
     database_manager = DatabaseManager(app_settings.database_url)
+    lock_manager = LockManager(
+        qr_secret=app_settings.qr_secret,
+        qr_step_seconds=app_settings.qr_step_seconds,
+        qr_allowed_drift_steps=app_settings.qr_allowed_drift_steps,
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -25,6 +31,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title=app_settings.app_name, lifespan=lifespan)
     app.state.database_manager = database_manager
+    app.state.lock_manager = lock_manager
     app.include_router(api_router, prefix=app_settings.api_prefix)
     return app
 
