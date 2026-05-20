@@ -170,8 +170,8 @@
     <main>
       <h1>LocKey Access Tester</h1>
       <p class="lead">
-        Тестовая страница для online и MVP offline-потока: выпустить <code>access_code</code>,
-        проверить вход по коду замка и заранее сохранить <code>offline_ticket</code> для BLE-фолбэка.
+        Тестовая страница для online-потока: выпустить <code>access_code</code>
+        и проверить вход по актуальному коду замка.
       </p>
 
       <div class="grid">
@@ -222,28 +222,6 @@
           </p>
         </section>
 
-        <section>
-          <h2>3. MVP offline ticket</h2>
-          <div class="form">
-            <label>
-              Offline ticket
-              <textarea
-                id="offlineTicket"
-                placeholder="Нажми 'Выпустить offline ticket', чтобы сохранить билет для BLE-открытия"
-              ></textarea>
-            </label>
-            <div class="actions">
-              <button id="issueOfflineTicketButton" type="button">Выпустить offline ticket</button>
-              <button id="verifyOfflineTicketButton" class="ghost" type="button">Проверить offline ticket</button>
-              <button id="copyOfflineTicketButton" class="ghost" type="button">Скопировать offline ticket</button>
-            </div>
-          </div>
-          <p class="hint">
-            Issue: <code>POST /api/v1/offline-tickets/issue</code>.
-            Verify: <code>POST /api/v1/offline-tickets/verify</code>.
-            В реальном offline-сценарии backend уже не участвует, этот verify нужен как эталон и тест.
-          </p>
-        </section>
       </div>
 
       <section style="margin-top: 18px">
@@ -260,7 +238,6 @@
         bookingStartsAt: document.getElementById("bookingStartsAt"),
         lockCode: document.getElementById("lockCode"),
         lockId: document.getElementById("lockId"),
-        offlineTicket: document.getElementById("offlineTicket"),
         response: document.getElementById("response"),
         status: document.getElementById("status"),
       };
@@ -383,51 +360,6 @@
         });
       }
 
-      async function issueOfflineTicket() {
-        const accessCode = elements.accessCode.value.trim();
-
-        if (!requireFields(
-          [elements.lockId.value.trim(), accessCode, elements.bookingStartsAt.value, elements.bookingEndsAt.value],
-          "Нужны access_code и окно бронирования",
-        )) {
-          return;
-        }
-
-        await runRequest({
-          action: "Выпускаю offline ticket...",
-          error: "Не удалось выпустить offline ticket",
-          request: () => postJson("/api/v1/offline-tickets/issue", {
-            ...getBookingRequest(),
-            access_code: accessCode,
-          }),
-          success: (payload) => {
-            elements.offlineTicket.value = payload.offline_ticket;
-          },
-          title: "Offline ticket выпущен",
-        });
-      }
-
-      async function verifyOfflineTicket() {
-        const offlineTicket = elements.offlineTicket.value.trim();
-
-        if (!requireFields(
-          [elements.lockId.value.trim(), offlineTicket],
-          "Нужны lock_id и offline_ticket",
-        )) {
-          return;
-        }
-
-        await runRequest({
-          action: "Проверяю offline ticket...",
-          error: "Offline ticket не прошёл проверку",
-          request: () => postJson("/api/v1/offline-tickets/verify", {
-            lock_id: elements.lockId.value.trim(),
-            offline_ticket: offlineTicket,
-          }),
-          title: "Offline ticket валиден",
-        });
-      }
-
       async function copyField(source, emptyMessage, successMessage) {
         const value = source.value.trim();
         if (!value) {
@@ -450,20 +382,13 @@
       document.getElementById("copyCodeButton").addEventListener("click", () =>
         copyField(elements.accessCode, "Сначала выпусти access code", "Access code скопирован"),
       );
-      document.getElementById("issueOfflineTicketButton").addEventListener("click", issueOfflineTicket);
-      document.getElementById("verifyOfflineTicketButton").addEventListener("click", verifyOfflineTicket);
-      document.getElementById("copyOfflineTicketButton").addEventListener("click", () =>
-        copyField(elements.offlineTicket, "Сначала выпусти offline ticket", "Offline ticket скопирован"),
-      );
 
       setDefaultWindow();
       setResponse("How to use", {
         steps: [
           "1. Убедись, что ESP32 подключена к backend по WebSocket.",
           "2. Выпусти access_code для lock_id и окна бронирования.",
-          "3. Для online-потока: считай текущий код с экрана замка и нажми 'Проверить и открыть'.",
-          "4. Для offline-потока: выпусти offline_ticket и сохрани его в приложении.",
-          "5. Endpoint verify для offline_ticket нужен как эталон до BLE-интеграции на ESP32.",
+          "3. Считай текущий код с экрана замка и нажми 'Проверить и открыть'.",
         ],
       });
     </script>

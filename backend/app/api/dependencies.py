@@ -6,7 +6,6 @@ from app.db.session import DatabaseManager
 from app.services.external_crm import ExternalCrmService
 from app.services.health import HealthService
 from app.services.locks import LockManager
-from app.services.offline_tickets import OfflineTicketService
 
 
 def get_database_manager(request: Request) -> DatabaseManager:
@@ -23,14 +22,6 @@ def get_external_crm_service() -> ExternalCrmService:
     return ExternalCrmService(
         code_secret=settings.external_crm_code_secret,
         early_access_buffer_minutes=settings.booking_early_access_buffer_minutes,
-    )
-
-
-def get_offline_ticket_service() -> OfflineTicketService:
-    settings = get_settings()
-    return OfflineTicketService(
-        secret=settings.offline_ticket_secret,
-        allowed_time_drift_seconds=settings.offline_ticket_allowed_drift_seconds,
     )
 
 

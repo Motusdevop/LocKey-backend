@@ -11,13 +11,13 @@
 - Формат данных: JSON
 - Формат времени: ISO 8601, желательно UTC с `Z`, например `2026-04-22T12:00:00Z`
 - Авторизация в текущем MVP не реализована. `access_code` выступает временным кодом доступа для бронирования.
+- Offline/BLE tickets временно отключены и не входят в текущий mobile REST flow.
 
 ## Термины
 
 - `lock_id` - строковый идентификатор замка, например `studio-a1`.
 - `access_code` - человекочитаемый код доступа к бронированию. Генерируется backend по `lock_id`, `booking_starts_at`, `booking_ends_at` и секрету CRM-интеграции.
 - `lock_code` - короткий динамический код замка. Backend отправляет его на ESP32 по WebSocket, замок показывает код/QR на экране. Код действует короткое время.
-- `offline_ticket` - подписанный offline-билет для BLE fallback. Формат: `ot1.<payload_base64url>.<signature_base64url>`.
 - `valid_from` - момент, с которого доступ разрешен. Сейчас это `booking_starts_at - 5 минут`.
 - `valid_until` - момент окончания доступа. Сейчас совпадает с `booking_ends_at`.
 
@@ -25,11 +25,10 @@
 
 1. Пользователь получает ссылку из CRM/мессенджера после бронирования.
 2. Приложение открывается по deep link и получает минимум: `lock_id`, `access_code`, `booking_starts_at`, `booking_ends_at`.
-3. Пока есть интернет, приложение запрашивает `offline_ticket` и сохраняет его локально для BLE fallback.
-4. У двери приложение сканирует QR/код на замке и получает `lock_code`.
-5. Для online-открытия приложение вызывает `POST /api/v1/locks/{lock_id}/verify-access`.
-6. Backend проверяет `access_code`, окно бронирования и `lock_code`, затем отправляет команду `open` на ESP32 по WebSocket.
-7. Если интернет недоступен, приложение использует сохраненный `offline_ticket` и передает его замку по BLE. В этом сценарии REST API в момент открытия не нужен.
+3. У двери приложение сканирует QR/код на замке и получает `lock_code`.
+4. Для online-открытия приложение вызывает `POST /api/v1/locks/{lock_id}/verify-access`.
+5. Backend проверяет `access_code`, окно бронирования и `lock_code`, затем отправляет команду `open` на ESP32 по WebSocket.
+6. Если backend или замок недоступны, текущий MVP показывает ошибку. Offline/BLE fallback пока не реализован.
 
 Рекомендуемый deep link для текущего MVP:
 
@@ -43,8 +42,6 @@ lockey://open?lock_id=studio-a1&access_code=ABCDEF1234&booking_starts_at=2026-04
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/health` | Опционально | Проверка доступности backend и БД |
 | `POST` | `/api/v1/external-crm/access-code` | Обычно нет | Выпуск `access_code` для CRM/тестов |
-| `POST` | `/api/v1/offline-tickets/issue` | Да | Получить offline-билет для BLE fallback |
-| `POST` | `/api/v1/offline-tickets/verify` | Только debug/dev | Эталонная backend-проверка offline-билета |
 | `POST` | `/api/v1/locks/{lock_id}/verify-access` | Да | Online-открытие замка по `access_code` + `lock_code` |
 | `POST` | `/api/v1/locks/{lock_id}/open` | Нет | Прямая команда открытия, без проверки доступа |
 | `WS` | `/api/v1/ws/locks/{lock_id}` | Нет | WebSocket для ESP32 |
@@ -79,7 +76,7 @@ GET /api/v1/health
 Как использовать в мобильном приложении:
 
 - Можно вызывать перед online-открытием, чтобы быстро понять, доступен ли backend.
-- Не нужно блокировать BLE fallback, если health check не прошел.
+- Не нужно блокировать UI только на основании health check: основной online-запрос всё равно вернет точную ошибку.
 
 ## Получение access code
 
@@ -123,102 +120,6 @@ Response `200`:
 Возможные ошибки:
 
 - `422 Unprocessable Entity` - пустой `lock_id`, некорректный формат даты или `booking_ends_at <= booking_starts_at`.
-
-## Получение offline ticket
-
-Мобильное приложение вызывает этот endpoint заранее, когда есть интернет. Полученный `offline_ticket` нужно сохранить локально и использовать для BLE fallback.
-
-```http
-POST /api/v1/offline-tickets/issue
-Content-Type: application/json
-```
-
-Request:
-
-```json
-{
-  "lock_id": "studio-a1",
-  "access_code": "JBSWY3DPEH",
-  "booking_starts_at": "2026-04-22T12:00:00Z",
-  "booking_ends_at": "2026-04-22T14:00:00Z"
-}
-```
-
-Response `200`:
-
-```json
-{
-  "ticket_id": "c2a23da6-9e5c-44a9-8c7d-6a29b75ab8d7",
-  "lock_id": "studio-a1",
-  "offline_ticket": "ot1.eyJpYXQiOiIx...signature",
-  "issued_at": "2026-04-22T10:00:00Z",
-  "valid_from": "2026-04-22T11:55:00Z",
-  "valid_until": "2026-04-22T14:00:00Z"
-}
-```
-
-Что делает backend:
-
-- Пересчитывает ожидаемый `access_code` для `lock_id + booking_starts_at + booking_ends_at`.
-- Проверяет только подпись/валидность `access_code`, но не требует, чтобы окно бронирования уже началось.
-- Запрещает выпуск билета, если бронирование уже закончилось.
-- Выпускает самодостаточный `offline_ticket`, подписанный `HMAC-SHA256`.
-
-Что хранить на телефоне:
-
-- `offline_ticket`
-- `ticket_id`
-- `lock_id`
-- `valid_from`
-- `valid_until`
-- исходные `access_code`, `booking_starts_at`, `booking_ends_at`, если они нужны для online flow
-
-Возможные ошибки:
-
-- `400 Bad Request` с `{"detail":"Access code is invalid"}` - код доступа не соответствует бронированию.
-- `403 Forbidden` с `{"detail":"Booking has already ended"}` - бронирование уже закончилось.
-- `422 Unprocessable Entity` - невалидный JSON, пустые строки или некорректное окно бронирования.
-
-## Проверка offline ticket через backend
-
-Endpoint полезен для отладки мобильного приложения и прошивки ESP32. В реальном offline-сценарии билет должен проверяться локально на замке, без backend.
-
-```http
-POST /api/v1/offline-tickets/verify
-Content-Type: application/json
-```
-
-Request:
-
-```json
-{
-  "lock_id": "studio-a1",
-  "offline_ticket": "ot1.eyJpYXQiOiIx...signature"
-}
-```
-
-Response `200`:
-
-```json
-{
-  "status": "valid",
-  "ticket_id": "c2a23da6-9e5c-44a9-8c7d-6a29b75ab8d7",
-  "lock_id": "studio-a1",
-  "issued_at": "2026-04-22T10:00:00Z",
-  "valid_from": "2026-04-22T11:55:00Z",
-  "valid_until": "2026-04-22T14:00:00Z"
-}
-```
-
-Возможные ошибки:
-
-- `400 Bad Request` с `{"detail":"Offline ticket format is invalid"}` - строка не разбивается на `version.payload.signature`.
-- `400 Bad Request` с `{"detail":"Offline ticket version is invalid"}` - версия не `ot1`.
-- `400 Bad Request` с `{"detail":"Offline ticket signature is invalid"}` - подпись не совпадает.
-- `400 Bad Request` с `{"detail":"Offline ticket lock_id does not match request"}` - билет выпущен для другого замка.
-- `403 Forbidden` с `{"detail":"Offline ticket is not active"}` - текущее время вне окна действия.
-
-Допуск по времени для проверки offline ticket: `60` секунд до/после окна. Это нужно для компенсации рассинхронизации часов.
 
 ## Online-открытие замка
 
@@ -286,7 +187,7 @@ Response `202 Accepted`:
 - `400 Lock code` - попросить пересканировать QR/обновить код.
 - `400 Access code` - показать ошибку доступа и предложить обратиться в поддержку/проверить ссылку.
 - `403 Booking access window` - показать время начала/окончания бронирования.
-- `404 Lock is offline` или network error - предложить BLE fallback, если `offline_ticket` сохранен.
+- `404 Lock is offline` или network error - показать, что online-открытие сейчас недоступно.
 
 ## Прямая команда открытия
 
@@ -364,27 +265,6 @@ https://lockey.app/open/studio-a1?s=A1B2C3
 - Из query parameter `s` взять `lock_code`.
 - Если `lock_id` из QR отличается от `lock_id` сохраненного бронирования, показать предупреждение и не отправлять запрос на открытие.
 
-## Offline BLE fallback
-
-REST API участвует только на этапе подготовки: приложение заранее получает `offline_ticket` через `/offline-tickets/issue`.
-
-В момент offline-открытия рекомендуемый flow такой:
-
-1. Приложение понимает, что backend недоступен или замок offline для backend.
-2. Приложение проверяет, что есть сохраненный `offline_ticket` для нужного `lock_id`.
-3. Приложение проверяет локально `valid_from`/`valid_until`, чтобы не предлагать заведомо недействительный билет.
-4. Приложение подключается к BLE-сервису замка.
-5. Приложение передает `offline_ticket` на ESP32.
-6. ESP32 проверяет подпись, `lock_id`, версию билета и окно действия.
-7. Если все валидно, ESP32 открывает реле локально.
-
-Текущие ограничения MVP:
-
-- `offline_ticket` подписан shared secret через `HMAC-SHA256`.
-- Билет не привязан к конкретному телефону.
-- Нет challenge-response защиты от replay по BLE.
-- Позже безопаснее перейти на подпись приватным ключом backend и проверку публичным ключом на ESP32.
-
 ## Типовые HTTP ошибки
 
 FastAPI возвращает ошибки в формате:
@@ -411,10 +291,10 @@ FastAPI возвращает ошибки в формате:
 
 Общие рекомендации:
 
-- Network error или timeout - переходить к BLE fallback, если билет сохранен.
+- Network error или timeout - показать ошибку online-соединения и предложить повторить попытку.
 - `400` - ошибка входных данных, чаще всего неверный/устаревший код.
 - `403` - доступ существует, но сейчас не разрешен по времени.
-- `404 Lock is offline` - замок не держит WebSocket с backend, можно пробовать BLE fallback.
+- `404 Lock is offline` - замок не держит WebSocket с backend.
 - `503` на health check - backend/БД недоступны, online flow не использовать.
 
 ## Минимальный mobile flow
@@ -423,9 +303,7 @@ FastAPI возвращает ошибки в формате:
 
 1. Распарсить `lock_id`, `access_code`, `booking_starts_at`, `booking_ends_at`.
 2. Сохранить их в локальное хранилище.
-3. Вызвать `POST /api/v1/offline-tickets/issue`.
-4. Если ответ `200`, сохранить `offline_ticket` и окно действия.
-5. Если запрос не прошел, не блокировать online flow, но показать, что offline-доступ пока не подготовлен.
+3. Показать пользователю окно бронирования и кнопку перехода к открытию.
 
 ### У двери при наличии интернета
 
@@ -437,11 +315,8 @@ FastAPI возвращает ошибки в формате:
 
 ### У двери без интернета
 
-1. Найти сохраненный `offline_ticket` для `lock_id`.
-2. Проверить локальное время относительно `valid_from`/`valid_until`.
-3. Подключиться к замку по BLE.
-4. Передать билет замку.
-5. Показать результат BLE-операции.
+1. Показать, что online-открытие недоступно.
+2. Предложить проверить соединение и повторить попытку.
 
 ## Пример curl для online-открытия
 
@@ -464,3 +339,4 @@ curl -X POST "http://localhost:8000/api/v1/locks/studio-a1/verify-access" \
 - REST-подтверждение фактического открытия замка после команды `open`.
 - Аудит попыток открытия.
 - Webhook обратно в CRM после успешного входа.
+- Offline/BLE fallback и offline tickets.
