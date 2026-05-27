@@ -103,6 +103,7 @@ Response `200`:
 {
   "lock_id": "studio-a1",
   "access_code": "JBSWY3DPEH",
+  "access_url": "https://lockey.app/open/studio-a1?s=JBSWY3DPEH",
   "booking_starts_at": "2026-04-22T12:00:00Z",
   "booking_ends_at": "2026-04-22T14:00:00Z",
   "valid_from": "2026-04-22T11:55:00Z",
@@ -116,6 +117,7 @@ Response `200`:
 - `booking_ends_at` должен быть строго больше `booking_starts_at`.
 - Если время приходит без timezone, backend трактует его как UTC.
 - `access_code` детерминирован для одной комбинации `lock_id + booking_starts_at + booking_ends_at`.
+- `access_url` соответствует формату `https://lockey.app/open/{lock_id}?s={access_code}`, который принимает мобильный parser.
 
 Возможные ошибки:
 

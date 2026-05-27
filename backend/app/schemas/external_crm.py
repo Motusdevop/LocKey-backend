@@ -18,6 +18,7 @@ class ExternalCrmAccessCodeRequest(BaseModel):
 class ExternalCrmAccessCodeResponse(BaseModel):
     lock_id: str
     access_code: str
+    access_url: str
     booking_starts_at: datetime
     booking_ends_at: datetime
     valid_from: datetime

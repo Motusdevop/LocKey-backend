@@ -2,6 +2,7 @@ import base64
 import hashlib
 import hmac
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 
 from app.schemas.external_crm import ExternalCrmAccessCodeResponse
 
@@ -15,6 +16,10 @@ class AccessWindowClosedError(Exception):
 
 
 class ExternalCrmService:
+    _access_url_origin = "https://lockey.app"
+    _open_path_prefix = "/open/"
+    _access_code_query = "s"
+
     def __init__(self, code_secret: str, early_access_buffer_minutes: int) -> None:
         self._code_secret = code_secret.encode()
         self._early_access_buffer_minutes = early_access_buffer_minutes
@@ -26,9 +31,11 @@ class ExternalCrmService:
         booking_ends_at: datetime,
     ) -> ExternalCrmAccessCodeResponse:
         starts_at, ends_at = self._normalize_window(booking_starts_at, booking_ends_at)
+        access_code = self._build_access_code(lock_id, starts_at, ends_at)
         return ExternalCrmAccessCodeResponse(
             lock_id=lock_id,
-            access_code=self._build_access_code(lock_id, starts_at, ends_at),
+            access_code=access_code,
+            access_url=self._build_access_url(lock_id, access_code),
             booking_starts_at=starts_at,
             booking_ends_at=ends_at,
             valid_from=starts_at - timedelta(minutes=self._early_access_buffer_minutes),
@@ -90,6 +97,10 @@ class ExternalCrmService:
             hashlib.sha256,
         ).digest()
         return base64.b32encode(digest).decode().rstrip("=")[:10]
+
+    def _build_access_url(self, lock_id: str, access_code: str) -> str:
+        lock_id_path = quote(lock_id, safe="")
+        return f"{self._access_url_origin}{self._open_path_prefix}{lock_id_path}?{self._access_code_query}={access_code}"
 
     def _ensure_access_code_matches(self, access_code: str, expected_code: str) -> None:
         if not hmac.compare_digest(access_code, expected_code):
