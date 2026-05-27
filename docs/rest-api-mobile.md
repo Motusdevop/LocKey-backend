@@ -252,19 +252,19 @@ WS /api/v1/ws/locks/{lock_id}
 В спецификации описан такой формат ссылки:
 
 ```text
-lockey://open?lock_id={lock_id}&lock_code={lock_code}
+http://45.154.35.214/LocKey/open/{lock_id}?s={lock_code}
 ```
 
 Пример:
 
 ```text
-lockey://open?lock_id=studio-a1&lock_code=A1B2C3
+http://45.154.35.214/LocKey/open/studio-a1?s=A1B2C3
 ```
 
 Рекомендация для мобильного приложения:
 
-- Из query parameter `lock_id` взять `lock_id`.
-- Из query parameter `lock_code` взять `lock_code`.
+- Из path взять `lock_id`.
+- Из query parameter `s` взять `lock_code`.
 - Если `lock_id` из QR отличается от `lock_id` сохраненного бронирования, показать предупреждение и не отправлять запрос на открытие.
 
 ## Типовые HTTP ошибки
