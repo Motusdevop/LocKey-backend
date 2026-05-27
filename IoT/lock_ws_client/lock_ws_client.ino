@@ -19,7 +19,7 @@ String currentCode = "------";
 unsigned long currentCodeExpiresAt = 0;
 
 String buildWebSocketUrl() {
-  return "ws://" + String(BACKEND_HOST) + ":" + String(BACKEND_PORT) + "/api/v1/ws/locks/" + LOCK_ID;
+  return "ws://" + String(BACKEND_HOST) + "/api/v1/ws/locks/" + LOCK_ID;
 }
 
 String buildOpenUrl() {

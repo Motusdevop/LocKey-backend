@@ -3,9 +3,9 @@
 #include "config.h"
 
 // WiFi & Backend
-const char* const WIFI_SSID = "MGTS_GPON_BE34";
-const char* const WIFI_PASS = "XQkRrnGW";
-const char* const BACKEND_HOST = "192.168.1.4";
+const char* const WIFI_SSID = "Motus";
+const char* const WIFI_PASS = "Merstop1";
+const char* const BACKEND_HOST = "45.154.35.214/LocKey";
 const uint16_t BACKEND_PORT = 8000;
 const char* const LOCK_ID = "studio-a1";
 const char* const LOCK_NAME = "Studio A1";

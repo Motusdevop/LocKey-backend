@@ -29,7 +29,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await database_manager.dispose()
         logger.info("Stopping application")
 
-    app = FastAPI(title=app_settings.app_name, lifespan=lifespan)
+    app = FastAPI(title=app_settings.app_name, lifespan=lifespan, root_path="/LocKey")
     app.state.database_manager = database_manager
     app.state.lock_manager = lock_manager
     app.include_router(api_router, prefix=app_settings.api_prefix)
