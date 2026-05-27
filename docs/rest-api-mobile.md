@@ -103,7 +103,7 @@ Response `200`:
 {
   "lock_id": "studio-a1",
   "access_code": "JBSWY3DPEH",
-  "access_url": "https://lockey.app/open/studio-a1?s=JBSWY3DPEH",
+  "access_url": "lockey://open?lock_id=studio-a1&access_code=JBSWY3DPEH&booking_starts_at=2026-04-22T12:00:00Z&booking_ends_at=2026-04-22T14:00:00Z",
   "booking_starts_at": "2026-04-22T12:00:00Z",
   "booking_ends_at": "2026-04-22T14:00:00Z",
   "valid_from": "2026-04-22T11:55:00Z",
@@ -117,7 +117,7 @@ Response `200`:
 - `booking_ends_at` должен быть строго больше `booking_starts_at`.
 - Если время приходит без timezone, backend трактует его как UTC.
 - `access_code` детерминирован для одной комбинации `lock_id + booking_starts_at + booking_ends_at`.
-- `access_url` соответствует формату `https://lockey.app/open/{lock_id}?s={access_code}`, который принимает мобильный parser.
+- `access_url` соответствует формату `lockey://open?lock_id={lock_id}&access_code={access_code}&booking_starts_at={booking_starts_at}&booking_ends_at={booking_ends_at}`.
 
 Возможные ошибки:
 
@@ -252,19 +252,19 @@ WS /api/v1/ws/locks/{lock_id}
 В спецификации описан такой формат ссылки:
 
 ```text
-https://lockey.app/open/{lock_id}?s={lock_code}
+lockey://open?lock_id={lock_id}&lock_code={lock_code}
 ```
 
 Пример:
 
 ```text
-https://lockey.app/open/studio-a1?s=A1B2C3
+lockey://open?lock_id=studio-a1&lock_code=A1B2C3
 ```
 
 Рекомендация для мобильного приложения:
 
-- Из path взять `lock_id`.
-- Из query parameter `s` взять `lock_code`.
+- Из query parameter `lock_id` взять `lock_id`.
+- Из query parameter `lock_code` взять `lock_code`.
 - Если `lock_id` из QR отличается от `lock_id` сохраненного бронирования, показать предупреждение и не отправлять запрос на открытие.
 
 ## Типовые HTTP ошибки

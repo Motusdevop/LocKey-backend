@@ -22,7 +22,10 @@ async def test_issue_external_crm_access_code_returns_code_and_window(client) ->
     assert payload["lock_id"] == "studio-a1"
     assert len(payload["access_code"]) == 10
     assert payload["access_code"].isalnum()
-    assert payload["access_url"] == f"https://lockey.app/open/studio-a1?s={payload['access_code']}"
+    assert payload["access_url"] == (
+        f"lockey://open?lock_id=studio-a1&access_code={payload['access_code']}"
+        "&booking_starts_at=2026-04-22T12:00:00Z&booking_ends_at=2026-04-22T14:00:00Z"
+    )
     assert payload["booking_starts_at"] == starts_at.isoformat().replace("+00:00", "Z")
     assert payload["booking_ends_at"] == ends_at.isoformat().replace("+00:00", "Z")
     assert payload["valid_from"] == (starts_at - timedelta(minutes=5)).isoformat().replace("+00:00", "Z")

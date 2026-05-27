@@ -2,7 +2,7 @@ import base64
 import hashlib
 import hmac
 from datetime import datetime, timedelta, timezone
-from urllib.parse import quote
+from urllib.parse import urlencode
 
 from app.schemas.external_crm import ExternalCrmAccessCodeResponse
 
@@ -16,9 +16,7 @@ class AccessWindowClosedError(Exception):
 
 
 class ExternalCrmService:
-    _access_url_origin = "https://lockey.app"
-    _open_path_prefix = "/open/"
-    _access_code_query = "s"
+    _access_url_base = "lockey://open"
 
     def __init__(self, code_secret: str, early_access_buffer_minutes: int) -> None:
         self._code_secret = code_secret.encode()
@@ -35,7 +33,7 @@ class ExternalCrmService:
         return ExternalCrmAccessCodeResponse(
             lock_id=lock_id,
             access_code=access_code,
-            access_url=self._build_access_url(lock_id, access_code),
+            access_url=self._build_access_url(lock_id, access_code, starts_at, ends_at),
             booking_starts_at=starts_at,
             booking_ends_at=ends_at,
             valid_from=starts_at - timedelta(minutes=self._early_access_buffer_minutes),
@@ -98,9 +96,26 @@ class ExternalCrmService:
         ).digest()
         return base64.b32encode(digest).decode().rstrip("=")[:10]
 
-    def _build_access_url(self, lock_id: str, access_code: str) -> str:
-        lock_id_path = quote(lock_id, safe="")
-        return f"{self._access_url_origin}{self._open_path_prefix}{lock_id_path}?{self._access_code_query}={access_code}"
+    def _build_access_url(
+        self,
+        lock_id: str,
+        access_code: str,
+        booking_starts_at: datetime,
+        booking_ends_at: datetime,
+    ) -> str:
+        query = urlencode(
+            {
+                "lock_id": lock_id,
+                "access_code": access_code,
+                "booking_starts_at": self._format_url_datetime(booking_starts_at),
+                "booking_ends_at": self._format_url_datetime(booking_ends_at),
+            },
+            safe=":-",
+        )
+        return f"{self._access_url_base}?{query}"
+
+    def _format_url_datetime(self, value: datetime) -> str:
+        return value.isoformat().replace("+00:00", "Z")
 
     def _ensure_access_code_matches(self, access_code: str, expected_code: str) -> None:
         if not hmac.compare_digest(access_code, expected_code):

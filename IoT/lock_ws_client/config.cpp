@@ -9,7 +9,7 @@ const char* const BACKEND_HOST = "45.154.35.214/LocKey";
 const uint16_t BACKEND_PORT = 8000;
 const char* const LOCK_ID = "studio-a1";
 const char* const LOCK_NAME = "Studio A1";
-const char* const LOCK_PUBLIC_BASE_URL = "http://lockey.app/open";
+const char* const LOCK_PUBLIC_BASE_URL = "lockey://open";
 
 // Pins
 const uint8_t RELAY_PIN = 26;
