@@ -12,6 +12,8 @@ WebsocketsClient websocketClient;
 TFT_eSPI tft = TFT_eSPI();
 
 bool relayActive = false;
+bool backendFailOpenActive = false;
+bool backendWarningVisible = false;
 unsigned long relayReleaseAtMs = 0;
 unsigned long lastConnectAttemptAtMs = 0;
 
@@ -99,8 +101,95 @@ void showQrCode() {
   drawQrFooter();
 }
 
+void drawThickLine(int x0, int y0, int x1, int y1, int radius, uint16_t color) {
+  const int steps = max(abs(x1 - x0), abs(y1 - y0));
+  if (steps == 0) {
+    tft.fillCircle(x0, y0, radius, color);
+    return;
+  }
+
+  for (int i = 0; i <= steps; i++) {
+    const int x = x0 + (x1 - x0) * i / steps;
+    const int y = y0 + (y1 - y0) * i / steps;
+    tft.fillCircle(x, y, radius, color);
+  }
+}
+
+void animateCheckSegment(int x0, int y0, int x1, int y1, int radius, uint16_t color) {
+  const int frames = 18;
+  for (int frame = 1; frame <= frames; frame++) {
+    const int x = x0 + (x1 - x0) * frame / frames;
+    const int y = y0 + (y1 - y0) * frame / frames;
+    drawThickLine(x0, y0, x, y, radius, color);
+    delay(18);
+  }
+}
+
+void showOpenCheckAnimation() {
+  const int centerX = tft.width() / 2;
+  const int centerY = tft.height() / 2;
+  const int x0 = centerX - 56;
+  const int y0 = centerY + 4;
+  const int x1 = centerX - 18;
+  const int y1 = centerY + 42;
+  const int x2 = centerX + 64;
+  const int y2 = centerY - 48;
+  const int radius = 6;
+
+  tft.fillScreen(COLOR_BG);
+  drawCenteredText("OPEN", 32, 4, COLOR_ACCENT, COLOR_BG);
+
+  animateCheckSegment(x0, y0, x1, y1, radius, COLOR_ACCENT);
+  animateCheckSegment(x1, y1, x2, y2, radius, COLOR_ACCENT);
+
+  delay(450);
+}
+
+void showBackendWarning() {
+  const int centerX = tft.width() / 2;
+  const int centerY = tft.height() / 2;
+  const int topX = centerX;
+  const int topY = centerY - 72;
+  const int leftX = centerX - 72;
+  const int bottomY = centerY + 58;
+  const int rightX = centerX + 72;
+
+  tft.fillScreen(COLOR_BG);
+  drawCenteredText("BACKEND OFFLINE", 28, 2, TFT_ORANGE, COLOR_BG);
+
+  drawThickLine(topX, topY, rightX, bottomY, 4, TFT_ORANGE);
+  drawThickLine(rightX, bottomY, leftX, bottomY, 4, TFT_ORANGE);
+  drawThickLine(leftX, bottomY, topX, topY, 4, TFT_ORANGE);
+
+  drawCenteredText("!", centerY + 8, 7, TFT_ORANGE, COLOR_BG);
+  drawCenteredText("DOOR OPEN", tft.height() - 28, 2, TFT_ORANGE, COLOR_BG);
+}
+
 void setRelayState(uint8_t state) {
   digitalWrite(RELAY_PIN, state);
+}
+
+void setBackendFailOpen(bool enabled) {
+  if (backendFailOpenActive == enabled) {
+    return;
+  }
+
+  backendFailOpenActive = enabled;
+  backendWarningVisible = false;
+
+  if (enabled) {
+    relayActive = false;
+    setRelayState(RELAY_ACTIVE_LEVEL);
+    Serial.println("Backend offline: fail-open relay enabled");
+    showBackendWarning();
+    backendWarningVisible = true;
+    return;
+  }
+
+  if (!relayActive) {
+    setRelayState(RELAY_INACTIVE_LEVEL);
+  }
+  Serial.println("Backend online: fail-open relay disabled");
 }
 
 void openRelay(unsigned long durationMs) {
@@ -116,7 +205,9 @@ void releaseRelayIfNeeded() {
   }
 
   if (static_cast<long>(millis() - relayReleaseAtMs) >= 0) {
-    setRelayState(RELAY_INACTIVE_LEVEL);
+    if (!backendFailOpenActive) {
+      setRelayState(RELAY_INACTIVE_LEVEL);
+    }
     relayActive = false;
     Serial.println("Relay released");
   }
@@ -127,7 +218,7 @@ void connectWiFi() {
     return;
   }
 
-  showStatus("WiFi", "connecting");
+  setBackendFailOpen(true);
   Serial.printf("Connecting WiFi to %s", WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -143,9 +234,17 @@ void connectWiFi() {
 }
 
 void connectWebSocket() {
-  if (WiFi.status() != WL_CONNECTED || websocketClient.available()) {
+  if (WiFi.status() != WL_CONNECTED) {
+    setBackendFailOpen(true);
     return;
   }
+
+  if (websocketClient.available()) {
+    setBackendFailOpen(false);
+    return;
+  }
+
+  setBackendFailOpen(true);
 
   if (millis() - lastConnectAttemptAtMs < WS_RECONNECT_INTERVAL_MS) {
     return;
@@ -156,14 +255,17 @@ void connectWebSocket() {
   const String wsUrl = buildWebSocketUrl();
   Serial.print("Connecting WS to ");
   Serial.println(wsUrl);
-  showStatus("WS", "connecting");
 
   if (!websocketClient.connect(wsUrl)) {
     Serial.println("WS connect failed");
-    showStatus("WS", "connect failed");
+    if (!backendWarningVisible) {
+      showBackendWarning();
+      backendWarningVisible = true;
+    }
     return;
   }
 
+  setBackendFailOpen(false);
   Serial.println("WS connected");
   showStatus("WS", "connected");
 }
@@ -190,6 +292,8 @@ void handleCodeMessage(const JsonDocument &document) {
 void handleOpenMessage(const JsonDocument &document) {
   const unsigned long durationMs = document["duration_ms"] | OPEN_DURATION_MS;
   openRelay(durationMs);
+  showOpenCheckAnimation();
+  showQrCode();
 }
 
 void handleMessage(const String &payload) {
@@ -242,9 +346,9 @@ void setup() {
     handleMessage(message.data());
   });
 
+  showStatus("Boot", LOCK_ID);
   connectWiFi();
   connectWebSocket();
-  showStatus("Boot", LOCK_ID);
 }
 
 void loop() {
