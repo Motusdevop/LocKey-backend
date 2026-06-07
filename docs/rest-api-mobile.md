@@ -9,7 +9,7 @@
 - Swagger UI FastAPI: `/docs`
 - OpenAPI schema: `/openapi.json`
 - Формат данных: JSON
-- Формат времени: ISO 8601, желательно UTC с `Z`, например `2026-04-22T12:00:00Z`
+- Формат времени: ISO 8601. Backend работает в MSK (`UTC+03:00`), например `2026-04-22T12:00:00+03:00`.
 - Авторизация в текущем MVP не реализована. `access_code` выступает временным кодом доступа для бронирования.
 - Offline/BLE tickets временно отключены и не входят в текущий mobile REST flow.
 
@@ -33,7 +33,7 @@
 Рекомендуемый deep link для текущего MVP:
 
 ```text
-lockey://open?lock_id=studio-a1&access_code=ABCDEF1234&booking_starts_at=2026-04-22T12:00:00Z&booking_ends_at=2026-04-22T14:00:00Z
+lockey://open?lock_id=studio-a1&access_code=ABCDEF1234&booking_starts_at=2026-04-22T12:00:00+03:00&booking_ends_at=2026-04-22T14:00:00+03:00
 ```
 
 ## Endpoint Summary
@@ -92,8 +92,8 @@ Request:
 ```json
 {
   "lock_id": "studio-a1",
-  "booking_starts_at": "2026-04-22T12:00:00Z",
-  "booking_ends_at": "2026-04-22T14:00:00Z"
+  "booking_starts_at": "2026-04-22T12:00:00+03:00",
+  "booking_ends_at": "2026-04-22T14:00:00+03:00"
 }
 ```
 
@@ -103,11 +103,11 @@ Response `200`:
 {
   "lock_id": "studio-a1",
   "access_code": "JBSWY3DPEH",
-  "access_url": "lockey://open?lock_id=studio-a1&access_code=JBSWY3DPEH&booking_starts_at=2026-04-22T12:00:00Z&booking_ends_at=2026-04-22T14:00:00Z",
-  "booking_starts_at": "2026-04-22T12:00:00Z",
-  "booking_ends_at": "2026-04-22T14:00:00Z",
-  "valid_from": "2026-04-22T11:55:00Z",
-  "valid_until": "2026-04-22T14:00:00Z"
+  "access_url": "lockey://open?lock_id=studio-a1&access_code=JBSWY3DPEH&booking_starts_at=2026-04-22T12:00:00%2B03:00&booking_ends_at=2026-04-22T14:00:00%2B03:00",
+  "booking_starts_at": "2026-04-22T12:00:00+03:00",
+  "booking_ends_at": "2026-04-22T14:00:00+03:00",
+  "valid_from": "2026-04-22T11:55:00+03:00",
+  "valid_until": "2026-04-22T14:00:00+03:00"
 }
 ```
 
@@ -115,7 +115,7 @@ Response `200`:
 
 - `lock_id` не может быть пустым.
 - `booking_ends_at` должен быть строго больше `booking_starts_at`.
-- Если время приходит без timezone, backend трактует его как UTC.
+- Если время приходит без timezone, backend трактует его как MSK (`UTC+03:00`).
 - `access_code` детерминирован для одной комбинации `lock_id + booking_starts_at + booking_ends_at`.
 - `access_url` соответствует формату `lockey://open?lock_id={lock_id}&access_code={access_code}&booking_starts_at={booking_starts_at}&booking_ends_at={booking_ends_at}`.
 
@@ -144,8 +144,8 @@ Request:
 {
   "access_code": "JBSWY3DPEH",
   "lock_code": "A1B2C3",
-  "booking_starts_at": "2026-04-22T12:00:00Z",
-  "booking_ends_at": "2026-04-22T14:00:00Z"
+  "booking_starts_at": "2026-04-22T12:00:00+03:00",
+  "booking_ends_at": "2026-04-22T14:00:00+03:00"
 }
 ```
 
@@ -328,8 +328,8 @@ curl -X POST "http://localhost:8000/api/v1/locks/studio-a1/verify-access" \
   -d '{
     "access_code": "JBSWY3DPEH",
     "lock_code": "A1B2C3",
-    "booking_starts_at": "2026-04-22T12:00:00Z",
-    "booking_ends_at": "2026-04-22T14:00:00Z"
+    "booking_starts_at": "2026-04-22T12:00:00+03:00",
+    "booking_ends_at": "2026-04-22T14:00:00+03:00"
   }'
 ```
 

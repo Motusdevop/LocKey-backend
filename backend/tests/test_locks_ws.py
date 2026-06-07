@@ -39,6 +39,23 @@ def test_open_command_is_delivered_to_connected_lock(sync_client: TestClient) ->
         }
 
 
+def test_open_link_is_delivered_to_connected_lock(sync_client: TestClient) -> None:
+    with connect_lock(sync_client, "studio-a1") as websocket:
+        first_message = websocket.receive_json()
+        assert first_message["type"] == "code"
+
+        response = sync_client.get("/api/v1/locks/studio-a1/open")
+
+        assert response.status_code == 202
+        payload = response.json()
+        assert payload["status"] == "sent"
+        assert payload["lock_id"] == "studio-a1"
+        assert websocket.receive_json() == {
+            "type": "open",
+            "command_id": payload["command_id"],
+        }
+
+
 def test_open_command_returns_not_found_for_offline_lock(sync_client: TestClient) -> None:
     response = sync_client.post("/api/v1/locks/studio-a1/open")
 

@@ -7,6 +7,9 @@ from urllib.parse import urlencode
 from app.schemas.external_crm import ExternalCrmAccessCodeResponse
 
 
+MSK_TZ = timezone(timedelta(hours=3), "MSK")
+
+
 class InvalidAccessCodeError(Exception):
     pass
 
@@ -77,7 +80,7 @@ class ExternalCrmService:
     ) -> None:
         valid_from = self._normalize_datetime(valid_from)
         valid_until = self._normalize_datetime(valid_until)
-        current_time = self._normalize_datetime(now or datetime.now(timezone.utc))
+        current_time = self._normalize_datetime(now or datetime.now(MSK_TZ))
 
         if current_time < valid_from or current_time > valid_until:
             raise AccessWindowClosedError("Booking access window is closed")
@@ -115,7 +118,7 @@ class ExternalCrmService:
         return f"{self._access_url_base}?{query}"
 
     def _format_url_datetime(self, value: datetime) -> str:
-        return value.isoformat().replace("+00:00", "Z")
+        return value.isoformat()
 
     def _ensure_access_code_matches(self, access_code: str, expected_code: str) -> None:
         if not hmac.compare_digest(access_code, expected_code):
@@ -126,5 +129,5 @@ class ExternalCrmService:
 
     def _normalize_datetime(self, value: datetime) -> datetime:
         if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
-        return value.astimezone(timezone.utc)
+            return value.replace(tzinfo=MSK_TZ)
+        return value.astimezone(MSK_TZ)

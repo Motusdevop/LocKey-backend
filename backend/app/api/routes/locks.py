@@ -12,6 +12,7 @@ from app.services.locks import InvalidLockCodeError, LockManager, LockNotConnect
 router = APIRouter()
 
 
+@router.get("/locks/{lock_id}/open", response_model=OpenLockResponse, status_code=HTTPStatus.ACCEPTED)
 @router.post("/locks/{lock_id}/open", response_model=OpenLockResponse, status_code=HTTPStatus.ACCEPTED)
 async def open_lock(
     lock_id: str,

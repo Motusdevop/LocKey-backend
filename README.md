@@ -85,6 +85,7 @@ uv run pytest
 | `LOCKEY_QR_ALLOWED_DRIFT_STEPS` | `1` | Допустимое окно предыдущего/следующего кода |
 | `LOCKEY_EXTERNAL_CRM_CODE_SECRET` | `change-me-external-crm-secret` | HMAC-секрет для кодов бронирования |
 | `LOCKEY_BOOKING_EARLY_ACCESS_BUFFER_MINUTES` | `5` | Буфер раннего входа до начала бронирования |
+| Backend timezone | `MSK / UTC+03:00` | Naive datetime значения трактуются как московское время |
 | `LOCKEY_DB_HOST` | `postgres` | PostgreSQL host |
 | `LOCKEY_DB_PORT` | `5432` | PostgreSQL port |
 | `LOCKEY_DB_NAME` | `lockey` | PostgreSQL database |

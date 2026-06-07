@@ -25,7 +25,7 @@ String buildWebSocketUrl() {
 }
 
 String buildOpenUrl() {
-  return String(LOCK_PUBLIC_BASE_URL) + "/" + LOCK_ID + "?s=" + currentCode;
+  return String(LOCK_PUBLIC_BASE_URL) + "/" + LOCK_ID + LOCK_OPEN_PATH_SUFFIX;
 }
 
 void drawCenteredText(const String &text, int y, int font, uint16_t fg, uint16_t bg) {

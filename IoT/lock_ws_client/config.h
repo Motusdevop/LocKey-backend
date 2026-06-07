@@ -10,6 +10,7 @@ extern const uint16_t BACKEND_PORT;
 extern const char* const LOCK_ID;
 extern const char* const LOCK_NAME;
 extern const char* const LOCK_PUBLIC_BASE_URL;
+extern const char* const LOCK_OPEN_PATH_SUFFIX;
 
 // Pins
 extern const uint8_t RELAY_PIN;

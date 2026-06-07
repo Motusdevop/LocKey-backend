@@ -10,4 +10,5 @@
 
 #define LOCKEY_LOCK_ID "studio-a1"
 #define LOCKEY_LOCK_NAME "Studio A1"
-#define LOCKEY_LOCK_PUBLIC_BASE_URL "http://example.com/LocKey/open"
+#define LOCKEY_LOCK_PUBLIC_BASE_URL "http://example.com/LocKey//api/v1/locks"
+#define LOCKEY_LOCK_OPEN_PATH_SUFFIX "/open"

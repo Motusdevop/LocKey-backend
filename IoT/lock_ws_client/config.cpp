@@ -7,15 +7,15 @@
 #endif
 
 #ifndef LOCKEY_WIFI_SSID
-#define LOCKEY_WIFI_SSID "CHANGE_ME"
+#define LOCKEY_WIFI_SSID "iPhone (Max)"
 #endif
 
 #ifndef LOCKEY_WIFI_PASS
-#define LOCKEY_WIFI_PASS "CHANGE_ME"
+#define LOCKEY_WIFI_PASS "12345678"
 #endif
 
 #ifndef LOCKEY_BACKEND_HOST
-#define LOCKEY_BACKEND_HOST "localhost"
+#define LOCKEY_BACKEND_HOST "45.154.35.214/LocKey"
 #endif
 
 #ifndef LOCKEY_BACKEND_PORT
@@ -31,7 +31,11 @@
 #endif
 
 #ifndef LOCKEY_LOCK_PUBLIC_BASE_URL
-#define LOCKEY_LOCK_PUBLIC_BASE_URL "http://localhost:8000/open"
+#define LOCKEY_LOCK_PUBLIC_BASE_URL "http://45.154.35.214/LocKey/api/v1/locks"
+#endif
+
+#ifndef LOCKEY_LOCK_OPEN_PATH_SUFFIX
+#define LOCKEY_LOCK_OPEN_PATH_SUFFIX "/open"
 #endif
 
 // WiFi & Backend
@@ -42,6 +46,7 @@ const uint16_t BACKEND_PORT = LOCKEY_BACKEND_PORT;
 const char* const LOCK_ID = LOCKEY_LOCK_ID;
 const char* const LOCK_NAME = LOCKEY_LOCK_NAME;
 const char* const LOCK_PUBLIC_BASE_URL = LOCKEY_LOCK_PUBLIC_BASE_URL;
+const char* const LOCK_OPEN_PATH_SUFFIX = LOCKEY_LOCK_OPEN_PATH_SUFFIX;
 
 // Pins
 const uint8_t RELAY_PIN = 26;
