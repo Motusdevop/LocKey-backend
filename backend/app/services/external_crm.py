@@ -118,7 +118,7 @@ class ExternalCrmService:
         return f"{self._access_url_base}?{query}"
 
     def _format_url_datetime(self, value: datetime) -> str:
-        return value.isoformat()
+        return value.replace(tzinfo=None).isoformat()
 
     def _ensure_access_code_matches(self, access_code: str, expected_code: str) -> None:
         if not hmac.compare_digest(access_code, expected_code):

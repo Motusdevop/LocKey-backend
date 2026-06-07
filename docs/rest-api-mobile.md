@@ -33,7 +33,7 @@
 Рекомендуемый deep link для текущего MVP:
 
 ```text
-lockey://open?lock_id=studio-a1&access_code=ABCDEF1234&booking_starts_at=2026-04-22T12:00:00+03:00&booking_ends_at=2026-04-22T14:00:00+03:00
+lockey://open?lock_id=studio-a1&access_code=ABCDEF1234&booking_starts_at=2026-04-22T12:00:00&booking_ends_at=2026-04-22T14:00:00
 ```
 
 ## Endpoint Summary
@@ -103,7 +103,7 @@ Response `200`:
 {
   "lock_id": "studio-a1",
   "access_code": "JBSWY3DPEH",
-  "access_url": "lockey://open?lock_id=studio-a1&access_code=JBSWY3DPEH&booking_starts_at=2026-04-22T12:00:00%2B03:00&booking_ends_at=2026-04-22T14:00:00%2B03:00",
+  "access_url": "lockey://open?lock_id=studio-a1&access_code=JBSWY3DPEH&booking_starts_at=2026-04-22T12:00:00&booking_ends_at=2026-04-22T14:00:00",
   "booking_starts_at": "2026-04-22T12:00:00+03:00",
   "booking_ends_at": "2026-04-22T14:00:00+03:00",
   "valid_from": "2026-04-22T11:55:00+03:00",

@@ -29,8 +29,8 @@ async def test_issue_external_crm_access_code_returns_code_and_window(client) ->
     assert payload["access_code"].isalnum()
     assert payload["access_url"] == (
         f"lockey://open?lock_id=studio-a1&access_code={payload['access_code']}"
-        "&booking_starts_at=2026-04-22T15:00:00%2B03:00"
-        "&booking_ends_at=2026-04-22T17:00:00%2B03:00"
+        "&booking_starts_at=2026-04-22T15:00:00"
+        "&booking_ends_at=2026-04-22T17:00:00"
     )
     assert payload["booking_starts_at"] == starts_at_msk.isoformat()
     assert payload["booking_ends_at"] == ends_at_msk.isoformat()
@@ -54,6 +54,12 @@ async def test_issue_external_crm_access_code_treats_naive_time_as_msk(client) -
     assert payload["booking_starts_at"] == "2026-04-22T12:00:00+03:00"
     assert payload["booking_ends_at"] == "2026-04-22T14:00:00+03:00"
     assert payload["valid_from"] == "2026-04-22T11:55:00+03:00"
+    assert payload["valid_until"] == "2026-04-22T14:00:00+03:00"
+    assert payload["access_url"] == (
+        f"lockey://open?lock_id=studio-a1&access_code={payload['access_code']}"
+        "&booking_starts_at=2026-04-22T12:00:00"
+        "&booking_ends_at=2026-04-22T14:00:00"
+    )
 
 
 @pytest.mark.asyncio
